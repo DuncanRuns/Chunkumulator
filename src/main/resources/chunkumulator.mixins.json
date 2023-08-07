@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "me.duncanruns.chunkumulator.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "ServerPlayerEntityMixin",
+    "ThreadedAnvilChunkStorageAccessor",
+    "ThreadedAnvilChunkStorageMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "IntegratedServerAccessor"
+  ]
+}

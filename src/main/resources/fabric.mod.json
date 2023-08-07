@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "chunkumulator",
+	"version": "${version}",
+	"name": "Chunkumulator",
+	"description": "This mod accumulates a list of chunks it needs to send to each player and sends them in chunks of chunks!",
+	"authors": [
+		"DuncanRuns"
+	],
+	"contact": {
+		"sources": "https://github.com/DuncanRuns/Chunkumulator",
+		"issues": "https://github.com/DuncanRuns/Chunkumulator/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/chunkumulator/icon.png",
+	"environment": "*",
+	"entrypoints": {
+	},
+	"mixins": [
+		"chunkumulator.mixins.json"
+	],
+	"depends": {
+		"minecraft": "~1.16.1"
+	}
+}
