@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ThreadedAnvilChunkStorageMixin {
     @Shadow
     @Final
-    private ServerWorld world;
+    ServerWorld world;
 
     @Inject(method = "sendChunkDataPackets", at = @At("HEAD"), cancellable = true)
     private void interceptChunkSend(ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk, CallbackInfo ci) {

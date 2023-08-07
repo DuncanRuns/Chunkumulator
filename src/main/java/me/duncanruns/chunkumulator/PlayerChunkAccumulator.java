@@ -66,9 +66,8 @@ public class PlayerChunkAccumulator {
         }
 
         void updateDistance() {
-            BlockPos.Mutable pos = player.getBlockPos().mutableCopy();
-            pos.setY(0);
-            distance = (int) (chunkPos.getCenterBlockPos().getSquaredDistance(pos));
+            BlockPos pos = player.getBlockPos();
+            distance = (int) (chunkPos.getCenterAtY(pos.getY()).getSquaredDistance(pos));
         }
 
         public void sendToPlayer() {
