@@ -9,6 +9,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +20,9 @@ public abstract class ThreadedAnvilChunkStorageMixin {
     @Final
     ServerWorld world;
 
+    @Unique
+    private ServerPlayerEntity hostPlayer = null;
+
     @Inject(method = "sendChunkDataPackets", at = @At("HEAD"), cancellable = true)
     private void interceptChunkSend(ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk, CallbackInfo ci) {
         // packets being a length of 3 indicates that we want to send now, so do not intercept.
@@ -28,8 +32,10 @@ public abstract class ThreadedAnvilChunkStorageMixin {
 
         // If the server is integrated and the host player has not yet joined (so open to lan isn't even on) or the player is the host player, do not intercept.
         if (!world.getServer().isDedicated()) {
-            ServerPlayerEntity hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid());
-            if (hostPlayer == null || player.equals(hostPlayer)) {
+            if (hostPlayer == null) {
+                hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid());
+            }
+            if (player.equals(hostPlayer)) {
                 return;
             }
         }
