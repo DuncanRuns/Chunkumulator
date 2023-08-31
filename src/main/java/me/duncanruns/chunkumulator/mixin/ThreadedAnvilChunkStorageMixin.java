@@ -41,9 +41,11 @@ public abstract class ThreadedAnvilChunkStorageMixin implements ThreadedAnvilChu
         // If the server is integrated and the host player has not yet joined (so open to lan isn't even on) or the player is the host player, do not intercept.
         if (!world.getServer().isDedicated()) {
             if (hostPlayer == null) {
-                hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid());
+                if ((hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid())) == null) {
+                    return;
+                }
             }
-            if (hostPlayer == null || player.equals(hostPlayer)) {
+            if (player.equals(hostPlayer)) {
                 return;
             }
         }
