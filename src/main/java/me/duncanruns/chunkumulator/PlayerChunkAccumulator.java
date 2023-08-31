@@ -3,6 +3,7 @@ package me.duncanruns.chunkumulator;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import me.duncanruns.chunkumulator.mixinint.ThreadedAnvilChunkStorageInt;
 import net.minecraft.network.Packet;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerChunkManager;
@@ -44,7 +45,7 @@ public class PlayerChunkAccumulator {
             queuedPackages.remove(courier);
             courier.sendToPlayer();
         });
-        player.networkHandler.sendPacket(EMPTY_PACKET, future -> readyForMore.set(true));
+        player.networkHandler.sendPacket(EMPTY_PACKET, PacketCallbacks.always(() -> readyForMore.set(true)));
     }
 
     public void removeChunk(ChunkPos chunkPos) {
