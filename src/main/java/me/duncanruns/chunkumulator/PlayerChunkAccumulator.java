@@ -1,7 +1,7 @@
 package me.duncanruns.chunkumulator;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import me.duncanruns.chunkumulator.mixin.ThreadedAnvilChunkStorageAccessor;
+import me.duncanruns.chunkumulator.mixinint.ThreadedAnvilChunkStorageInt;
 import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -73,7 +73,7 @@ public class PlayerChunkAccumulator {
         public void sendToPlayer() {
             World world = player.world;
             WorldChunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
-            ((ThreadedAnvilChunkStorageAccessor) ((ServerChunkManager) world.getChunkManager()).threadedAnvilChunkStorage).invokeSendChunkDataPackets(player, new Packet[3], chunk);
+            ((ThreadedAnvilChunkStorageInt) ((ServerChunkManager) world.getChunkManager()).threadedAnvilChunkStorage).chunkumulator$actuallySendChunkDataPackets(player, chunk);
         }
     }
 }
