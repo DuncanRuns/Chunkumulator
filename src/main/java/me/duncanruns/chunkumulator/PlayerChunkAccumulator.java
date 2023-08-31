@@ -39,7 +39,7 @@ public class PlayerChunkAccumulator {
         if (queuedPackages.isEmpty()) return;
         readyForMore.set(false);
 
-        queuedPackages.removeIf(courier -> courier.world != player.world);
+        queuedPackages.removeIf(courier -> courier.world != player.getWorld());
         queuedPackages.forEach(Courier::updateDistance);
         queuedPackages.stream().sorted(Comparator.comparingInt(o -> o.distance)).collect(Collectors.toList()).subList(0, Math.min(100, queuedPackages.size())).forEach(courier -> {
             queuedPackages.remove(courier);
@@ -72,7 +72,7 @@ public class PlayerChunkAccumulator {
         }
 
         public void sendToPlayer() {
-            World world = player.world;
+            World world = player.getWorld();
             WorldChunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
             ((ThreadedAnvilChunkStorageInt) ((ServerChunkManager) world.getChunkManager()).threadedAnvilChunkStorage).chunkumulator$actuallySendChunkDataPackets(player, chunk);
         }
