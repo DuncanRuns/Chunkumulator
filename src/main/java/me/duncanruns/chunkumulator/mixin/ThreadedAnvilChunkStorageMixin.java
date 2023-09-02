@@ -13,8 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(ThreadedAnvilChunkStorage.class)
 public abstract class ThreadedAnvilChunkStorageMixin implements ThreadedAnvilChunkStorageInt {
@@ -25,38 +24,41 @@ public abstract class ThreadedAnvilChunkStorageMixin implements ThreadedAnvilChu
     @Unique
     private ServerPlayerEntity hostPlayer = null;
 
-    @Unique
-    private final MutableObject<ChunkDataS2CPacket> actuallySendSignal = new MutableObject<>();
-
     @Shadow
     protected abstract void sendChunkDataPackets(ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk);
 
-    @Inject(method = "sendChunkDataPackets", at = @At("HEAD"), cancellable = true)
-    private void interceptChunkSend(ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk, CallbackInfo ci) {
-        // cachedDataPacket == ACTUALLY_SEND_SIGNAL means go ahead with it
-        if (cachedDataPacket == actuallySendSignal) {
-            return;
-        }
+    // method_17243 is a lambda expression
+    @Redirect(method = "method_17243", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;sendChunkDataPackets(Lnet/minecraft/server/network/ServerPlayerEntity;Lorg/apache/commons/lang3/mutable/MutableObject;Lnet/minecraft/world/chunk/WorldChunk;)V"))
+    private void redirectChunkSend1(ThreadedAnvilChunkStorage instance, ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk) {
+        redirectChunkSend(player, cachedDataPacket, chunk);
+    }
 
-        // If the server is integrated and the host player has not yet joined (so open to lan isn't even on) or the player is the host player, do not intercept.
+    @Redirect(method = "sendWatchPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;sendChunkDataPackets(Lnet/minecraft/server/network/ServerPlayerEntity;Lorg/apache/commons/lang3/mutable/MutableObject;Lnet/minecraft/world/chunk/WorldChunk;)V"))
+    private void redirectChunkSend2(ThreadedAnvilChunkStorage instance, ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk) {
+        redirectChunkSend(player, cachedDataPacket, chunk);
+    }
+
+    @Unique
+    private void redirectChunkSend(ServerPlayerEntity player, MutableObject<ChunkDataS2CPacket> cachedDataPacket, WorldChunk chunk) {
+        // assert packets[0] == null;
         if (!world.getServer().isDedicated()) {
             if (hostPlayer == null) {
                 if ((hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid())) == null) {
+                    sendChunkDataPackets(player, cachedDataPacket, chunk);
                     return;
                 }
             }
             if (player.equals(hostPlayer)) {
+                sendChunkDataPackets(player, cachedDataPacket, chunk);
                 return;
             }
         }
 
         Chunkumulator.getChunkQueueFromPlayer(player).addChunk(chunk.getPos(), world);
-        ci.cancel();
     }
 
     @Override
     public void chunkumulator$actuallySendChunkDataPackets(ServerPlayerEntity player, WorldChunk chunk) {
-        actuallySendSignal.setValue(null);
-        sendChunkDataPackets(player, actuallySendSignal, chunk);
+        sendChunkDataPackets(player, new MutableObject<>(), chunk);
     }
 }
