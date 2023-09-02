@@ -11,8 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(ThreadedAnvilChunkStorage.class)
 public abstract class ThreadedAnvilChunkStorageMixin {
@@ -23,26 +22,36 @@ public abstract class ThreadedAnvilChunkStorageMixin {
     @Unique
     private ServerPlayerEntity hostPlayer = null;
 
-    @Inject(method = "sendChunkDataPackets", at = @At("HEAD"), cancellable = true)
-    private void interceptChunkSend(ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk, CallbackInfo ci) {
-        // packets being a length of 3 indicates that we want to send now, so do not intercept.
-        if (packets.length == 3) {
-            return;
-        }
+    @Shadow
+    protected abstract void sendChunkDataPackets(ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk);
 
-        // If the server is integrated and the host player has not yet joined (so open to lan isn't even on) or the player is the host player, do not intercept.
+    // method_17243 is a lambda expression
+    @Redirect(method = "method_17243", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;sendChunkDataPackets(Lnet/minecraft/server/network/ServerPlayerEntity;[Lnet/minecraft/network/Packet;Lnet/minecraft/world/chunk/WorldChunk;)V"))
+    private void redirectChunkSend1(ThreadedAnvilChunkStorage instance, ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk) {
+        redirectChunkSend(player, packets, chunk);
+    }
+
+    @Redirect(method = "sendWatchPackets", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage;sendChunkDataPackets(Lnet/minecraft/server/network/ServerPlayerEntity;[Lnet/minecraft/network/Packet;Lnet/minecraft/world/chunk/WorldChunk;)V"))
+    private void redirectChunkSend2(ThreadedAnvilChunkStorage instance, ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk) {
+        redirectChunkSend(player, packets, chunk);
+    }
+
+    @Unique
+    private void redirectChunkSend(ServerPlayerEntity player, Packet<?>[] packets, WorldChunk chunk) {
+        // assert packets[0] == null;
         if (!world.getServer().isDedicated()) {
             if (hostPlayer == null) {
                 if ((hostPlayer = world.getServer().getPlayerManager().getPlayer(((IntegratedServerAccessor) world.getServer()).getLocalPlayerUuid())) == null) {
+                    sendChunkDataPackets(player, packets, chunk);
                     return;
                 }
             }
             if (player.equals(hostPlayer)) {
+                sendChunkDataPackets(player, packets, chunk);
                 return;
             }
         }
 
         Chunkumulator.getChunkQueueFromPlayer(player).addChunk(chunk.getPos(), world);
-        ci.cancel();
     }
 }

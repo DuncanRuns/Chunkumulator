@@ -73,7 +73,7 @@ public class PlayerChunkAccumulator {
         public void sendToPlayer() {
             World world = player.world;
             WorldChunk chunk = world.getChunk(chunkPos.x, chunkPos.z);
-            ((ThreadedAnvilChunkStorageAccessor) ((ServerChunkManager) world.getChunkManager()).threadedAnvilChunkStorage).invokeSendChunkDataPackets(player, new Packet[3], chunk);
+            ((ThreadedAnvilChunkStorageAccessor) ((ServerChunkManager) world.getChunkManager()).threadedAnvilChunkStorage).invokeSendChunkDataPackets(player, new Packet[2], chunk);
         }
     }
 }
