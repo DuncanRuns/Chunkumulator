@@ -23,6 +23,12 @@ public class PlayerChunkAccumulator {
     private final List<Courier> queuedPackages = new ArrayList<>();
     private final AtomicBoolean readyForMore = new AtomicBoolean(true);
 
+    private static final int MIN_BATCH_SIZE = 16;
+    private static final int MAX_BATCH_SIZE = 256;
+    private static final int TARGET_RTT_LOWER = 200;
+    private static final int TARGET_RTT_UPPER = 550;
+    private int batchSize = 32;
+
     public PlayerChunkAccumulator(ServerPlayerEntity player) {
         this.player = player;
     }
@@ -33,18 +39,50 @@ public class PlayerChunkAccumulator {
         queuedPackages.add(courier);
     }
 
-    public void tick() {
+    public synchronized void tick() {
         if (!readyForMore.get()) return;
         if (queuedPackages.isEmpty()) return;
         readyForMore.set(false);
 
         queuedPackages.removeIf(courier -> courier.world != player.world);
         queuedPackages.forEach(Courier::updateDistance);
-        queuedPackages.stream().sorted(Comparator.comparingInt(o -> o.distance)).limit(100).collect(Collectors.toList()).forEach(courier -> {
+        queuedPackages.stream().sorted(Comparator.comparingInt(o -> o.distance)).limit(batchSize).collect(Collectors.toList()).forEach(courier -> {
             queuedPackages.remove(courier);
             if (courier.isChunkLoaded()) courier.sendToPlayer();
         });
-        player.networkHandler.sendPacket(EMPTY_PACKET, future -> readyForMore.set(true));
+
+        boolean fullSpeedSend = !queuedPackages.isEmpty();
+        long sendTime = System.currentTimeMillis();
+        player.networkHandler.sendPacket(EMPTY_PACKET, future -> {
+            readyForMore.set(true);
+            if (fullSpeedSend) updateBatchSize(System.currentTimeMillis() - sendTime);
+        });
+    }
+
+    private synchronized void updateBatchSize(long rtt) {
+        int startSpeed = batchSize;
+        if (rtt < TARGET_RTT_LOWER) {
+            // The purpose of the booster value is to significantly jump the batch size if the connection is very good.
+            // The calculation blindly assumes the rtt (round trip time) involves 0 ping and is purely the time spent
+            // transferring chunk data, for example if a connected player has 50 ping and the round trip time was 100
+            // (meaning 50 for purely transferring chunks), it assumes all 100 were spent purely on transferring chunk
+            // data. It will then calculate how much the batch size should be multiplied by to achieve the lower rtt
+            // target (200 / 100 = 2). Since the actual chunk transfer time is lower, the booster speed almost certainly
+            // won't cause the rtt to exceed the lower target (in the example, it would only get it to 150).
+            int booster = (int) (batchSize * (TARGET_RTT_LOWER / (double) rtt));
+            // Final decision: We should at least increase by a couple for when getting close to the target, and don't
+            // increase by more than max.
+            batchSize = Math.min(MAX_BATCH_SIZE, Math.max(batchSize + 4, (booster + batchSize) / 2));
+        } else if (rtt > TARGET_RTT_UPPER) {
+            // Starting batch size (32) is low enough that we don't need the opposite of a booster. In case of a spike
+            // for better connections, it's better not to overreact, so only cut by 20% if over threshold.
+            // Final decision: don't decrease more than minimum. Minimum (16) should be low enough to provide playability
+            // to very poor connections, while ensuring that chunks keep continuously sending
+            batchSize = Math.max(MIN_BATCH_SIZE, (int) (batchSize * 0.8));
+        }
+        if (startSpeed != batchSize) {
+            Chunkumulator.LOGGER.info("Updated speed for {}: rtt={}, speed={}", player.getEntityName(), rtt, batchSize);
+        }
     }
 
     public void removeChunk(ChunkPos chunkPos) {
