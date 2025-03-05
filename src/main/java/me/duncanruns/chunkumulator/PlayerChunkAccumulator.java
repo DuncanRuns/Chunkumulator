@@ -40,7 +40,7 @@ public class PlayerChunkAccumulator {
 
         queuedPackages.removeIf(courier -> courier.world != player.world);
         queuedPackages.forEach(Courier::updateDistance);
-        queuedPackages.stream().sorted(Comparator.comparingInt(o -> o.distance)).collect(Collectors.toList()).subList(0, Math.min(100, queuedPackages.size())).forEach(courier -> {
+        queuedPackages.stream().sorted(Comparator.comparingInt(o -> o.distance)).limit(100).collect(Collectors.toList()).forEach(courier -> {
             queuedPackages.remove(courier);
             if (courier.isChunkLoaded()) courier.sendToPlayer();
         });
