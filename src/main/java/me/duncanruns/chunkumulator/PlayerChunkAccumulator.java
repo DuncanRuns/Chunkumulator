@@ -1,9 +1,8 @@
 package me.duncanruns.chunkumulator;
 
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import me.duncanruns.chunkumulator.mixin.ThreadedAnvilChunkStorageAccessor;
 import net.minecraft.network.Packet;
-import net.minecraft.network.packet.s2c.play.StatisticsS2CPacket;
+import net.minecraft.network.packet.s2c.play.KeepAliveS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.util.math.BlockPos;
@@ -14,14 +13,14 @@ import net.minecraft.world.chunk.WorldChunk;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class PlayerChunkAccumulator {
-    private static final Packet<?> EMPTY_PACKET = new StatisticsS2CPacket(new Object2IntOpenHashMap<>());
     private final ServerPlayerEntity player;
     private final List<Courier> queuedPackages = new ArrayList<>();
-    private final AtomicBoolean readyForMore = new AtomicBoolean(true);
+    private boolean readyForMore = true;
+    private long lastSendTime;
+    private boolean lastSendWasBatchSize;
 
     private static final int MIN_BATCH_SIZE = 16;
     private static final int MAX_BATCH_SIZE = 256;
@@ -40,9 +39,9 @@ public class PlayerChunkAccumulator {
     }
 
     public synchronized void tick() {
-        if (!readyForMore.get()) return;
+        if (!readyForMore) return;
         if (queuedPackages.isEmpty()) return;
-        readyForMore.set(false);
+        readyForMore = false;
 
         queuedPackages.removeIf(courier -> courier.world != player.world);
         queuedPackages.forEach(Courier::updateDistance);
@@ -51,12 +50,11 @@ public class PlayerChunkAccumulator {
             if (courier.isChunkLoaded()) courier.sendToPlayer();
         });
 
-        boolean fullSpeedSend = !queuedPackages.isEmpty();
-        long sendTime = System.currentTimeMillis();
-        player.networkHandler.sendPacket(EMPTY_PACKET, future -> {
-            readyForMore.set(true);
-            if (fullSpeedSend) updateBatchSize(System.currentTimeMillis() - sendTime);
-        });
+        lastSendWasBatchSize = !queuedPackages.isEmpty();
+        lastSendTime = System.currentTimeMillis();
+
+        // Send a keep alive packet with id -1, the client will respond with a keep alive packet with the given ID
+        player.networkHandler.sendPacket(new KeepAliveS2CPacket(-1));
     }
 
     private synchronized void updateBatchSize(long rtt) {
@@ -89,6 +87,11 @@ public class PlayerChunkAccumulator {
 
     public void removeChunk(ChunkPos chunkPos) {
         queuedPackages.removeIf(courier -> courier.chunkPos.equals(chunkPos));
+    }
+
+    public synchronized void onFinishBatch() {
+        readyForMore = true;
+        if (lastSendWasBatchSize) updateBatchSize(System.currentTimeMillis() - lastSendTime);
     }
 
     /**
