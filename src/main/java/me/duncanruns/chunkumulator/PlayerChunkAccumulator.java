@@ -42,6 +42,7 @@ public class PlayerChunkAccumulator {
         if (!readyForMore) return;
         if (queuedPackages.isEmpty()) return;
         readyForMore = false;
+        lastSendWasBatchSize = queuedPackages.size() >= batchSize;
 
         queuedPackages.removeIf(courier -> courier.world != player.world);
         queuedPackages.forEach(Courier::updateDistance);
@@ -50,7 +51,6 @@ public class PlayerChunkAccumulator {
             if (courier.isChunkLoaded()) courier.sendToPlayer();
         });
 
-        lastSendWasBatchSize = !queuedPackages.isEmpty();
         lastSendTime = System.currentTimeMillis();
 
         // Send a keep alive packet with id -1, the client will respond with a keep alive packet with the given ID
