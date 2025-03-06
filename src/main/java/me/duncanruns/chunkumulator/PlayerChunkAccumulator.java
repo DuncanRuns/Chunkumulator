@@ -23,7 +23,7 @@ public class PlayerChunkAccumulator {
     private boolean lastSendWasBatchSize;
 
     private static final int MIN_BATCH_SIZE = 16;
-    private static final int MAX_BATCH_SIZE = 256;
+    private static final int MAX_BATCH_SIZE = 128;
     private static final int TARGET_RTT_LOWER = 200;
     private static final int TARGET_RTT_UPPER = 550;
     private int batchSize = 32;
