@@ -69,6 +69,8 @@ public class PlayerChunkAccumulator {
             // data. It will then calculate how much the batch size should be multiplied by to achieve the lower rtt
             // target (200 / 100 = 2). Since the actual chunk transfer time is lower, the booster speed almost certainly
             // won't cause the rtt to exceed the lower target (in the example, it would only get it to 150).
+            // Additionally, it will only go halfway towards the calculated booster value, so it will definitely need
+            // a few cycles before either maxing out or hitting target rtt.
             int booster = (int) (batchSize * (TARGET_RTT_LOWER / (double) rtt));
             // Final decision: We should at least increase by a couple for when getting close to the target, and don't
             // increase by more than max.
