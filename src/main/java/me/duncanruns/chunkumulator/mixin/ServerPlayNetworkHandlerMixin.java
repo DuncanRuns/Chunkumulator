@@ -1,5 +1,6 @@
 package me.duncanruns.chunkumulator.mixin;
 
+import me.duncanruns.chunkumulator.Chunkumulator;
 import me.duncanruns.chunkumulator.mixinint.ServerPlayerEntityInt;
 import net.minecraft.network.packet.c2s.play.KeepAliveC2SPacket;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
@@ -17,9 +18,9 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
     @Inject(method = "onKeepAlive", at = @At("HEAD"), cancellable = true)
     private void interceptChunkumulatorReply(KeepAliveC2SPacket packet, CallbackInfo ci) {
-        // Normally the id of the keep alive packet is of a timestamp, but if it's -1 that means it's Chunkumulator
-        // looking for a reply to determine rtt, so redirect those to the PlayerChunkAccumulator.
-        if (packet.getId() == -1) {
+        // Normally the id of the keep alive packet is of a timestamp, but if it's CHUNKUMULATOR_KEEPALIVE_ID that means
+        // it's Chunkumulator looking for a reply to determine rtt, so redirect those to the PlayerChunkAccumulator.
+        if (packet.getId() == Chunkumulator.CHUNKUMULATOR_KEEPALIVE_ID) {
             ci.cancel();
             ((ServerPlayerEntityInt) player).chunkumulator$getChunkQueue().onFinishBatch();
         }

@@ -53,8 +53,8 @@ public class PlayerChunkAccumulator {
 
         lastSendTime = System.currentTimeMillis();
 
-        // Send a keep alive packet with id -1, the client will respond with a keep alive packet with the given ID
-        player.networkHandler.sendPacket(new KeepAliveS2CPacket(-1));
+        // Send a keep alive packet with a custom negative id, the client will respond with a keep alive packet with the given ID
+        player.networkHandler.sendPacket(new KeepAliveS2CPacket(Chunkumulator.CHUNKUMULATOR_KEEPALIVE_ID));
     }
 
     private synchronized void updateBatchSize(long rtt) {
