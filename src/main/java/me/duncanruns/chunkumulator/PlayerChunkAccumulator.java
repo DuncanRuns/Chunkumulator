@@ -59,7 +59,6 @@ public class PlayerChunkAccumulator {
     }
 
     private synchronized void updateBatchSize(long rtt) {
-        int startSpeed = batchSize;
         if (rtt < TARGET_RTT_LOWER) {
             // The purpose of the booster value is to significantly jump the batch size if the connection is very good.
             // The calculation blindly assumes the rtt (round trip time) involves 0 ping and is purely the time spent
