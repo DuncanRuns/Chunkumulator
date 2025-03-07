@@ -59,7 +59,6 @@ public class PlayerChunkAccumulator {
     }
 
     private synchronized void updateBatchSize(long rtt) {
-        Chunkumulator.LOGGER.info("{} rtt={}", player.getEntityName(), rtt);
         int startSpeed = batchSize;
         if (rtt < TARGET_RTT_LOWER) {
             // The purpose of the booster value is to significantly jump the batch size if the connection is very good.
@@ -83,9 +82,6 @@ public class PlayerChunkAccumulator {
             batchSize = Math.max(MIN_BATCH_SIZE, (int) (batchSize * 0.8));
         }
         averageRtt = (rtt + averageRtt * 3) / 4;
-        if (startSpeed != batchSize) {
-            Chunkumulator.LOGGER.info("Updated speed for {}: rtt={}, speed={}", player.getEntityName(), rtt, batchSize);
-        }
     }
 
     public void removeChunk(ChunkPos chunkPos) {
