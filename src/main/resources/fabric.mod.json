@@ -15,6 +15,9 @@
 	"icon": "assets/chunkumulator/icon.png",
 	"environment": "*",
 	"entrypoints": {
+		"mixinsquared": [
+			"me.duncanruns.chunkumulator.KryptonCanceller"
+		]
 	},
 	"mixins": [
 		"chunkumulator.mixins.json"
