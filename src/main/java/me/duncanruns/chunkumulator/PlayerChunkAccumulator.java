@@ -39,7 +39,7 @@ public class PlayerChunkAccumulator {
     public synchronized void tick() {
         if (queuedPackages.isEmpty()) return;
         if (!batchDeliveryInfoQueue.isEmpty()) {
-            if ((System.currentTimeMillis() - lastSendTime) < (averageRtt)) return;
+            if ((System.currentTimeMillis() - lastSendTime) < (averageRtt / 2)) return;
             if (batchDeliveryInfoQueue.size() >= 2) return;
         }
 
