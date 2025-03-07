@@ -10,23 +10,21 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class PlayerChunkAccumulator {
     private final ServerPlayerEntity player;
     private final List<Courier> queuedPackages = new ArrayList<>();
-    private boolean readyForMore = true;
     private long lastSendTime;
-    private boolean lastSendWasBatchSize;
+    private final Queue<BatchDeliveryInfo> batchDeliveryInfoQueue = new LinkedList<>();
 
-    private static final int MIN_BATCH_SIZE = 16;
+    private static long averageRtt;
+    private static final int MIN_BATCH_SIZE = 8;
     private static final int MAX_BATCH_SIZE = 128;
     private static final int TARGET_RTT_LOWER = 200;
     private static final int TARGET_RTT_UPPER = 550;
-    private int batchSize = 32;
+    private int batchSize = 16;
 
     public PlayerChunkAccumulator(ServerPlayerEntity player) {
         this.player = player;
@@ -39,10 +37,14 @@ public class PlayerChunkAccumulator {
     }
 
     public synchronized void tick() {
-        if (!readyForMore) return;
         if (queuedPackages.isEmpty()) return;
-        readyForMore = false;
-        lastSendWasBatchSize = queuedPackages.size() >= batchSize;
+        if (!batchDeliveryInfoQueue.isEmpty()) {
+            if ((System.currentTimeMillis() - lastSendTime) < (averageRtt)) return;
+            if (batchDeliveryInfoQueue.size() >= 2) return;
+        }
+
+        lastSendTime = System.currentTimeMillis();
+        batchDeliveryInfoQueue.add(new BatchDeliveryInfo(lastSendTime, queuedPackages.size() >= batchSize));
 
         queuedPackages.removeIf(courier -> courier.world != player.world);
         queuedPackages.forEach(Courier::updateDistance);
@@ -51,13 +53,13 @@ public class PlayerChunkAccumulator {
             if (courier.isChunkLoaded()) courier.sendToPlayer();
         });
 
-        lastSendTime = System.currentTimeMillis();
 
         // Send a keep alive packet with a custom negative id, the client will respond with a keep alive packet with the given ID
         player.networkHandler.sendPacket(new KeepAliveS2CPacket(Chunkumulator.CHUNKUMULATOR_KEEPALIVE_ID));
     }
 
     private synchronized void updateBatchSize(long rtt) {
+        Chunkumulator.LOGGER.info("{} rtt={}", player.getEntityName(), rtt);
         int startSpeed = batchSize;
         if (rtt < TARGET_RTT_LOWER) {
             // The purpose of the booster value is to significantly jump the batch size if the connection is very good.
@@ -80,6 +82,7 @@ public class PlayerChunkAccumulator {
             // to very poor connections, while ensuring that chunks keep continuously sending
             batchSize = Math.max(MIN_BATCH_SIZE, (int) (batchSize * 0.8));
         }
+        averageRtt = (rtt + averageRtt * 3) / 4;
         if (startSpeed != batchSize) {
             Chunkumulator.LOGGER.info("Updated speed for {}: rtt={}, speed={}", player.getEntityName(), rtt, batchSize);
         }
@@ -90,8 +93,8 @@ public class PlayerChunkAccumulator {
     }
 
     public synchronized void onFinishBatch() {
-        readyForMore = true;
-        if (lastSendWasBatchSize) updateBatchSize(System.currentTimeMillis() - lastSendTime);
+        BatchDeliveryInfo info = Objects.requireNonNull(batchDeliveryInfoQueue.poll());
+        if (info.wasFullBatch) updateBatchSize(System.currentTimeMillis() - info.startTime);
     }
 
     /**
@@ -121,6 +124,16 @@ public class PlayerChunkAccumulator {
 
         public boolean isChunkLoaded() {
             return world.isChunkLoaded(chunkPos.x, chunkPos.z);
+        }
+    }
+
+    private static class BatchDeliveryInfo {
+        private final long startTime;
+        private final boolean wasFullBatch;
+
+        private BatchDeliveryInfo(long startTime, boolean wasFullBatch) {
+            this.startTime = startTime;
+            this.wasFullBatch = wasFullBatch;
         }
     }
 }
