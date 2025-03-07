@@ -38,8 +38,12 @@ public class PlayerChunkAccumulator {
 
     public synchronized void tick() {
         if (queuedPackages.isEmpty()) return;
+        // If there's chunks available and none are being delivered at the moment, no further checks are needed
         if (!batchDeliveryInfoQueue.isEmpty()) {
+            // If some chunks are already being sent, we should push another batch of chunks at the halfway point of the
+            // average RTT to ensure chunks are being continuously sent.
             if ((System.currentTimeMillis() - lastSendTime) < (averageRtt / 2)) return;
+            // But never have more than 2 chunk batches queued at any given time.
             if (batchDeliveryInfoQueue.size() >= 2) return;
         }
 
@@ -54,7 +58,9 @@ public class PlayerChunkAccumulator {
         });
 
 
-        // Send a keep alive packet with a custom negative id, the client will respond with a keep alive packet with the given ID
+        // Send a keep alive packet with a custom negative id, the client will respond with a keep alive packet with the given ID.
+        // We can't use a sendPacket future listener to determine RTT due to possible connection setups (e.g. e4mc), so
+        // we need to send a packet that the client game has to properly respond to, which KeepAlive packets do.
         player.networkHandler.sendPacket(new KeepAliveS2CPacket(Chunkumulator.CHUNKUMULATOR_KEEPALIVE_ID));
     }
 
