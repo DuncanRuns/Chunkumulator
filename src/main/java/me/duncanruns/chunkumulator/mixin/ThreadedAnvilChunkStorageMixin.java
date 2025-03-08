@@ -20,7 +20,6 @@ public abstract class ThreadedAnvilChunkStorageMixin implements ThreadedAnvilChu
     @Shadow
     @Final
     ServerWorld world;
-
     @Unique
     private ServerPlayerEntity hostPlayer = null;
 
