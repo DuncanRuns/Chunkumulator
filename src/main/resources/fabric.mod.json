@@ -23,7 +23,7 @@
     "chunkumulator.mixins.json"
   ],
   "depends": {
-    "minecraft": "~1.15.2"
+    "minecraft": "1.15.x"
   },
   "custom": {
     "lithium:options": {
