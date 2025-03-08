@@ -19,8 +19,8 @@ public class PlayerChunkAccumulator {
     private final Queue<BatchDeliveryInfo> batchDeliveryInfoQueue = new LinkedList<>();
 
     private static final int MIN_BATCH_SIZE = 8;
-    private static final int MAX_BATCH_SIZE = 128;
-    private static final int TARGET_RTT_LOWER = 200;
+    private static final int MAX_BATCH_SIZE = 64;
+    private static final int TARGET_RTT_LOWER = 80;
     private static final int TARGET_RTT_UPPER = 550;
     private static long averageRtt = (TARGET_RTT_LOWER + TARGET_RTT_UPPER) / 2;
     private int batchSize = 16;
