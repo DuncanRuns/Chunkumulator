@@ -23,7 +23,10 @@
     "chunkumulator.mixins.json"
   ],
   "depends": {
-    "minecraft": ["1.19.x", "1.20-alpha.23.13.ab"]
+    "minecraft": [
+      "1.19.x",
+      "1.20-alpha.23.13.ab"
+    ]
   },
   "custom": {
     "lithium:options": {
